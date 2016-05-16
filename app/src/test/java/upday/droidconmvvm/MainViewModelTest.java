@@ -22,6 +22,9 @@ public class MainViewModelTest {
     private IDataModel mDataModel;
 
     private MainViewModel mMainViewModel;
+    
+    private static final Language GERMAN = new Language("German", LanguageCode.DE);
+    private static final Language ENGLISH = new Language("English", LanguageCode.EN);
 
     @Before
     public void setUp() throws Exception {
@@ -31,7 +34,23 @@ public class MainViewModelTest {
     }
 
     @Test
-    public void testGetSupportedLanguages_emitsCorrectLanguages() {
+    public void testGetGreeting_doesNotEmit_whenNoLanguageSet1() {
+        TestSubscriber<String> testSubscriber = new TestSubscriber<>();
+        mMainViewModel.getGreeting().subscribe(testSubscriber);
+
+        testSubscriber.assertNoErrors();
+        testSubscriber.assertNoValues();
+    }
+
+    @Test
+    public void testGetGreeting_doesNotEmit_whenNoLanguageSet2() {
+        TestSubscriber<String> testSubscriber = subscribeTs(mMainViewModel.getGreeting());
+
+        testSubscriber.assertNoTerminalEvent();
+    }
+
+    @Test
+    public void testGetSupportedLanguages_emitsCorrectLanguages1() {
         Language de = new Language("German", LanguageCode.DE);
         Language en = new Language("English", LanguageCode.EN);
         List<Language> languages = Arrays.asList(de, en);
@@ -45,27 +64,31 @@ public class MainViewModelTest {
     }
 
     @Test
-    public void testGetGreeting_doesNotEmit_whenNoLanguageSet() {
-        TestSubscriber<String> testSubscriber = new TestSubscriber<>();
-        mMainViewModel.getGreeting().subscribe(testSubscriber);
+    public void testGetSupportedLanguages_emitsCorrectLanguages2() {
+        List<Language> languages = Arrays.asList(GERMAN, ENGLISH);
+        new ArrangeBuilder().withLanguages(languages);
+
+        TestSubscriber<List<Language>> testSubscriber = subscribeTs(mMainViewModel.getSupportedLanguages());
 
         testSubscriber.assertNoErrors();
-        testSubscriber.assertNoValues();
+        testSubscriber.assertValue(languages);
     }
 
-    @Test
-    public void testGetGreeting_emitsCorrectGreeting_whenLanguageSet() {
-        String enGreeting = "Hello";
-        Language en = new Language("English", LanguageCode.EN);
-        Mockito.when(mDataModel.getGreetingByLanguageCode(LanguageCode.EN))
-               .thenReturn(Observable.just(enGreeting));
-        TestSubscriber<String> testSubscriber = new TestSubscriber<>();
-        mMainViewModel.getGreeting().subscribe(testSubscriber);
 
-        mMainViewModel.languageSelected(en);
-
-        testSubscriber.assertNoErrors();
-        testSubscriber.assertValue(enGreeting);
+    private static <T> TestSubscriber<T> subscribeTs(Observable<T> observable) {
+        TestSubscriber<T> testSubscriber = new TestSubscriber<>();
+        observable.subscribe(testSubscriber);
+        return testSubscriber;
     }
+
+    private class ArrangeBuilder {
+
+        ArrangeBuilder withLanguages(List<Language> languages) {
+            Mockito.when(mDataModel.getSupportedLanguages())
+                    .thenReturn(Observable.just(languages));
+            return this;
+        }
+    }
+
 }
 
